@@ -21,19 +21,27 @@ app.use(morgan(morganOption));
 app.use(helmet());
 app.use(cors());
 
+// Add token type
+// User service object for validation
+// Connect to PostgreSQL with Prisma
+
 const schema = buildSchema(`
   type Mutation {
-    postUserSignUpInputs(firstName: String!, lastName: String!, email: String!, username: String!, password: String!): User
+    postUserSignUpInput(input: SignUpInput): String!
   }
 
   type Query {
-    hello: String
-    user: User
+    authUserLogInInput(username: String!, password: String!): String!
+  }
+
+  input SignUpInput {
+    firstName: String!
+    lastName: String!
+    email: String!
+    username: String!
+    password: String!
   }
   
-  type User {
-    authUserLogInInputs(username: String!, password: String!): String!
-  }
 `);
 
 const fakeUserDatabase = {
@@ -41,27 +49,14 @@ const fakeUserDatabase = {
   password: 'pass',
 };
 
-class User {
-  postUserSignUpInputs({ firstName, lastName, email, username, password }) {
-    console.log('Hello')
-    fakeUserDatabase.user = {
-      firstName,
-      lastName,
-      email,
-      username,
-      password
-    }
+const root = {
+  hello: () => {
+    return 'Hello, world!';
+  },
 
-    return 'Successfully set up account'
-  }
-
-  authUserLogInInputs({ username, password }) {
-    // Todo:
-    // [] No username
-    // [] No password
-
-    console.log(username, password)
-
+  authUserLogInInput: ({ username, password }) => {
+    // Validate no username
+    // Validate no password
     if(username !== fakeUserDatabase.username) {
       return 'Incorrect Username'
     } 
@@ -72,24 +67,16 @@ class User {
 
     // Return token
     return 'Successfully logged in'
+  },
+
+  postUserSignUpInput: ({ input }) => {
+    // Validate fields
+    console.log(input);
+    return 'Successfully signed up'
   }
 }
 
-const root = {
-  hello: () => {
-    return 'Hello, world!';
-  },
-
-  user: () => {
-    return new User();
-  },
-
-  postUserSignUpInputs: () => {
-    return new User();
-  }
-}
-
-graphql(schema, 'mutation { postUserSignUpInputs(firstName: "M", lastName: "F", email: "E", username: "U", password: "P") }', root)
+graphql(schema, 'mutation { postUserSignUpInput(input: {firstName: "M", lastName: "F", email: "E", username: "U", password: "P"}) }', root)
   .then((response) => {
     console.log(response);
   });
