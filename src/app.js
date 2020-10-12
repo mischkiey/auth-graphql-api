@@ -13,6 +13,7 @@ const { NODE_ENV } = require('./config');
 const REGEX_UPPER_LOWER_NUMBER_SPECIAL = /(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&])[\S]+/;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('./config');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -29,6 +30,15 @@ app.use(cors());
 // Rename endpoints/fields
 // Factor out variables
 // Consider using fragments for practice
+
+// Stretch
+// Add requireAuth middleware
+
+// verifyJWT(token) {
+//   return jwt.verify(token, JWT_SECRET, {
+//       algorithm: 'HS256'
+//   });
+// }
 
 const schema = buildSchema(`
   type Mutation {
@@ -76,8 +86,15 @@ const validatePassword = (password) => {
   return null;
 }
 
-const hashPassword = (password) => {
-
+const createJsonWebToken = (user) => {
+  return jwt.sign(
+    {userId: user.id},
+    JWT_SECRET,
+    {
+      subject: user.username,
+      algorithm: 'HS256'
+    }
+  );
 }
 
 const root = {
@@ -85,14 +102,19 @@ const root = {
     // Validate if password is correct dummy
     try {
       const user = await getUserByUsername(username);
-      console.log(user);
+      if(!user) return 'Invalid username';
+
+      const match = await bcrypt.compare(password, user.password);
+      if(!match) return 'Invalid password';
+
+      const token = createJsonWebToken(user);
+      return token;
     } catch(e) {
       console.log(e);
     } finally {
+      console.log('Meow?')
       await prisma.$disconnect();
     }
-    // Return jwt
-    return 'Successfully logged in';
   },
 
   postUserSignUpInput: async ({ input }) => {
@@ -104,23 +126,30 @@ const root = {
       const passwordError = validatePassword(password);
       if(passwordError) return passwordError;
 
-      await insertNewUser(input);
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      // Alternatively, input.password = hashedPassword
+      const newUser = {
+        ...input,
+        password: hashedPassword
+      }
+
+      await insertNewUser(newUser);
       return 'Successfully signed up';
     } catch(e) {
       console.log(e);
     } finally {
-      console.log('Hi')
       await prisma.$disconnect();
     }
   }
 }
 
-graphql(schema, 'query { authUserLogInInput(username: "O", password: "P") }', root)
+graphql(schema, 'query { authUserLogInInput(username: "A", password: "!Expelliarmus01") }', root)
   .then((response) => {
     console.log(response);
   });
 
-// graphql(schema, 'mutation { postUserSignUpInput(input: {firstName: "M", lastName: "F", email: "E", username: "O", password: "!Expelliarmus01"}) }', root)
+// graphql(schema, 'mutation { postUserSignUpInput(input: {firstName: "M", lastName: "F", email: "E", username: "A", password: "!Expelliarmus01"}) }', root)
 //   .then((response) => {
 //     console.log(response);
 //   });
