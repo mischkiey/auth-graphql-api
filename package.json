@@ -7,6 +7,7 @@
     "test": "mocha --require test/setup.js",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "migrate": "npx prisma migrate up --experimental && npx prisma generate",
     "predeploy": "npm audit",
     "deploy": "git push heroku master"
   },
