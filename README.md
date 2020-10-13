@@ -66,7 +66,7 @@
 
 ## GraphQL Schema Documentation
 
-``
+```javascript
 type Mutation {
     login(username: String!, password: String!): AuthPayload
     signup(input: SignupInput): AuthPayload
@@ -92,7 +92,7 @@ type Mutation {
     username: String!
     password: String!
   }
-``
+```
 
 <br>
 
