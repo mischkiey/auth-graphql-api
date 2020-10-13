@@ -1,10 +1,10 @@
 # Simple Login/Registration App Demonstration
 
+* **Developer Name: Michelle Colacion Francisco**
+
 * Using ReactJS, NodeJS, Express, GraphQL, Prisma, & PostgreSQL
 
 * Created and submitted in fulfillment of the technical challenge for the Web Developer Position at StageWood Consortium, Inc.
-
-**Developer Name: Michelle Colacion Francisco**
 
 <br>
 
