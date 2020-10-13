@@ -1,7 +1,7 @@
-require('dotenv').config();
+ require('dotenv').config();
 const express = require('express');
 const { graphqlHTTP } = require('express-graphql');
-const { graphql, buildSchema } = require('graphql');
+const { buildSchema } = require('graphql');
 const { PrismaClient } = require('@prisma/client');
 
 const morgan = require('morgan');
@@ -9,21 +9,11 @@ const cors = require('cors');
 const helmet = require('helmet');
 
 const { NODE_ENV } = require('./config');
-const { errorObject } = require('./constants');
+const { errorObject } = require('./constants/error');
 
-const {
-  validatePassword,
-  hashPassword,
-  comparePasswords,
-  createJWT,
-} = require('./services/auth-service');
+const Mutation = require('./resolvers/Mutation');
 
-const {
-  getUserByUsername,
-  insertNewUser,
-} = require('./services/user-service');
-
-
+// Instantiations
 const app = express();
 const prisma = new PrismaClient();
 
@@ -36,17 +26,29 @@ app.use(helmet());
 app.use(cors());
 
 const schema = buildSchema(`
-  type Mutation {
-    postUserSignUpInput(input: SignUpInput): String!
-  }
-
   type Query {
-    authUserLogInInput(username: String!, password: String!): String!
-    user(authToken: String!): String!
-    hello: String!
+    user: User
   }
 
-  input SignUpInput {
+  type Mutation {
+    login(username: String!, password: String!): AuthPayload
+    signup(input: SignupInput): AuthPayload
+  }
+
+  type AuthPayload {
+    token: String
+    user: User
+  }
+
+  type User  {
+    id: ID!
+    firstName: String!
+    lastName: String!
+    email: String!
+    username: String!
+  }
+
+  input SignupInput {
     firstName: String!
     lastName: String!
     email: String!
@@ -56,54 +58,17 @@ const schema = buildSchema(`
 `);
 
 const root = {
-  authUserLogInInput: async({ username, password }) => {
-    try {
-      const user = await getUserByUsername(username, prisma);
-      if(!user) throw new Error('INCORRECT_CREDENTIALS');
-
-      const match = await comparePasswords(password, user.password);
-      if(!match) throw new Error('INCORRECT_CREDENTIALS');
-
-      const token = createJWT(user);
-      return token;
-    } catch(error) {
-      throw new Error(error.message);
-    } finally {
-      await prisma.$disconnect();
-    }
-  },
-
-  postUserSignUpInput: async ({ input }) => {
-    const { username, password } = input;
-    try {
-      const user = await getUserByUsername(username, prisma);
-      if(user) throw new Error('DUPLICATE_USERNAME');
-
-      validatePassword(password);
-
-      const hashedPassword = await hashPassword(password, 12);
-
-      // Alternatively, input.password = hashedPassword
-      const newUser = {
-        ...input,
-        password: hashedPassword
-      }
-      await insertNewUser(newUser, prisma);
-
-      const token = createJWT(newUser);
-      return token;
-    } catch(error) {
-      throw new Error(error.message);
-    } finally {
-      await prisma.$disconnect();
-    }
-  },
+  ...Mutation
 }
 
-app.use('/graphql', (req, res, next) => {
+app.use('/graphql', (req, res) => {
   graphqlHTTP({
     schema: schema,
     rootValue: root,
+    context: {
+      req,
+      prisma
+    },
     customFormatErrorFn: (error) => {
       const { message, statusCode = null } = errorObject[error.message] || error;
       if(statusCode) res.status(statusCode);

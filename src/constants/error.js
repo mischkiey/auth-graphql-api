@@ -27,5 +27,10 @@ exports.errorObject = {
   INVALID_PASSWORD: {
     message: 'Password must contain 1 upper case, 1 lower case, 1 number, and 1 special character',
     statusCode: 400
+  },
+
+  UNAUTHORIZED_REQUEST: {
+    message: 'Unauthorized request',
+    statusCode: 401
   }
 }
