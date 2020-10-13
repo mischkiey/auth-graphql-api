@@ -67,7 +67,7 @@
 ## GraphQL Schema Documentation
 
 ```javascript
-type Mutation {
+  type Mutation {
     login(username: String!, password: String!): AuthPayload
     signup(input: SignupInput): AuthPayload
   }
