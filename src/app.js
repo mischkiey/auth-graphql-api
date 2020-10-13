@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const { graphqlHTTP } = require('express-graphql');
 const { graphql, buildSchema } = require('graphql');
-
 const { PrismaClient } = require('@prisma/client');
 
 const morgan = require('morgan');
@@ -14,6 +13,7 @@ const REGEX_UPPER_LOWER_NUMBER_SPECIAL = /(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('./config');
+const { errorObject } = require('./constants');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -26,19 +26,11 @@ app.use(morgan(morganOption));
 app.use(helmet());
 app.use(cors());
 
-// Todo:
-// Rename endpoints/fields
-// Factor out variables
-// Consider using fragments for practice
-
-// Stretch
-// Add requireAuth middleware
-
-// verifyJWT(token) {
-//   return jwt.verify(token, JWT_SECRET, {
-//       algorithm: 'HS256'
-//   });
-// }
+const verifyJWT = (token) => {
+  return jwt.verify(token, JWT_SECRET, {
+      algorithm: 'HS256'
+  });
+}
 
 const schema = buildSchema(`
   type Mutation {
@@ -47,6 +39,8 @@ const schema = buildSchema(`
 
   type Query {
     authUserLogInInput(username: String!, password: String!): String!
+    user(authToken: String!): String!
+    hello: String!
   }
 
   input SignUpInput {
@@ -71,19 +65,13 @@ const insertNewUser = async(input) => {
 }
 
 const validatePassword = (password) => {
-  if (password.length <= 8)
-    return 'Password must be longer than 8 characters';
+  if (password.length <= 8) throw new Error('SHORT_PASSWORD');
 
-  if (password.length >= 72)
-    return 'Password must be shorter than 72 characters';
-
-  if (password.startsWith(' ') || password.endsWith(' '))
-    return 'Password must must not start or end with spaces';
-
-  if (!REGEX_UPPER_LOWER_NUMBER_SPECIAL.test(password))
-    return 'Password must contain 1 upper case, 1 lower case, 1 number, and 1 special character';
+  if (password.length >= 72) throw new Error('LONG_PASSWORD');
   
-  return null;
+  if (password.startsWith(' ') || password.endsWith(' ')) throw new Error('AMBIGUOUS_PASSWORD');
+    
+  if (!REGEX_UPPER_LOWER_NUMBER_SPECIAL.test(password)) throw new Error('INVALID_PASSWORD');
 }
 
 const createJsonWebToken = (user) => {
@@ -98,7 +86,7 @@ const createJsonWebToken = (user) => {
 }
 
 const root = {
-  authUserLogInInput: async ({ username, password }) => {
+  authUserLogInInput: async ({ username, password }, request) => {
     // Validate if password is correct dummy
     try {
       const user = await getUserByUsername(username);
@@ -112,7 +100,6 @@ const root = {
     } catch(e) {
       console.log(e);
     } finally {
-      console.log('Meow?')
       await prisma.$disconnect();
     }
   },
@@ -121,10 +108,9 @@ const root = {
     const { username, password } = input;
     try {
       const user = await getUserByUsername(username);
-      if(user) return 'Username already exists';
+      if(user) throw new Error('DUPLICATE_USERNAME');
 
-      const passwordError = validatePassword(password);
-      if(passwordError) return passwordError;
+      validatePassword(password);
 
       const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -133,32 +119,48 @@ const root = {
         ...input,
         password: hashedPassword
       }
-
       await insertNewUser(newUser);
-      return 'Successfully signed up';
-    } catch(e) {
-      console.log(e);
+
+      const token = createJsonWebToken(newUser);
+      return token;
+    } catch(error) {
+      throw new Error(error.message);
     } finally {
       await prisma.$disconnect();
     }
+  },
+}
+
+const test = {
+  hello: () => {
+    return 'Hello world'
   }
 }
 
-graphql(schema, 'query { authUserLogInInput(username: "A", password: "!Expelliarmus01") }', root)
-  .then((response) => {
-    console.log(response);
-  });
-
-// graphql(schema, 'mutation { postUserSignUpInput(input: {firstName: "M", lastName: "F", email: "E", username: "A", password: "!Expelliarmus01"}) }', root)
+// graphql(schema, '{ hello }', test)
 //   .then((response) => {
-//     console.log(response);
+//   console.log(response);
 //   });
 
-app.use('/graphql', graphqlHTTP({
-  schema: schema,
-  rootValue: root,
-  graphiql: true,
-}));
+app.use('/graphql', (req, res, next) => {
+  graphqlHTTP({
+    schema: schema,
+    rootValue: root,
+    customFormatErrorFn: (error) => {
+      const { message, statusCode } = errorObject[error.message];
+      res.status(statusCode);
+      return (message);
+    },
+    graphiql: true,
+  })
+  (req, res);
+})
+
+// app.use('/graphql', graphqlHTTP({
+//   schema: schema,
+//   rootValue: test,
+//   graphiql: true,
+// }));
 
 app.use(function errorHandler(error, req, res, next) { /* eslint-disable-line no-unused-var */
   let response;
