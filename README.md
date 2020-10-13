@@ -4,7 +4,7 @@
 
 * Using ReactJS, NodeJS, Express, GraphQL, Prisma, & PostgreSQL
 
-* Created and submitted in fulfillment of the technical challenge for the Web Developer Position at StageWood Consortium, Inc.
+* Created and submitted in fulfillment of the technical challenge for the Web Developer position at StageWood Consortium, Inc.
 
 <br>
 
