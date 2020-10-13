@@ -1,3 +1,6 @@
 # Prisma Migrate lockfile v1
 
 20201012025536-init
+20201012050249-username-as-unique-attribute
+20201012050607-username-as-unique-attribute
+20201012051436

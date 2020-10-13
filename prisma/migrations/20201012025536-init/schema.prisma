@@ -12,6 +12,6 @@ model User {
   firstName   String
   lastName    String
   email       String
-  username    String @unique
+  username    String
   password    String
 }
