@@ -1,4 +1,9 @@
 exports.errorObject = {
+  INCORRECT_CREDENTIALS: {
+    message: 'Incorrect username or password',
+    statusCode: 401
+  },
+
   DUPLICATE_USERNAME: {
     message: 'Username already taken',
     statusCode: 400
