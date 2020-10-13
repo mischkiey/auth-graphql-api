@@ -4,7 +4,7 @@ const UserService = {
 
   insertNewUser: async (newUser, prisma) =>
     await prisma.user.create({
-      data: input
+      data: newUser
     })
 }
 
