@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const { NODE_ENV } = require('./config');
 const { errorObject } = require('./constants/error');
 
+const Query = require('./resolvers/Query');
 const Mutation = require('./resolvers/Mutation');
 
 // Instantiations
@@ -58,6 +59,7 @@ const schema = buildSchema(`
 `);
 
 const root = {
+  ...Query,
   ...Mutation
 }
 

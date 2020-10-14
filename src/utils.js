@@ -1,7 +1,6 @@
-const { verify } = require('jsonwebtoken');
 const { verifyJWT } = require('./services/auth-service');
 
-const getUserId = async(req) => {
+const getUserId = (req) => {
   const auth = req.get('Authorization') || '';
 
   if(auth) {

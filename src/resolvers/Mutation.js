@@ -33,33 +33,33 @@ const login = async({ username, password }, { prisma }) => {
 
 const signup = async({ input }, { prisma }) => {
   const { username, password } = input;
-    try {
-      let user = await getUserByUsername(username, prisma);
-      if(user) throw new Error('DUPLICATE_USERNAME');
+  try {
+    let user = await getUserByUsername(username, prisma);
+    if(user) throw new Error('DUPLICATE_USERNAME');
 
-      validatePassword(password);
+    validatePassword(password);
 
-      const hashedPassword = await hashPassword(password, 12);
+    const hashedPassword = await hashPassword(password, 12);
 
-      // Alternatively, input.password = hashedPassword
-      const newUser = {
-        ...input,
-        password: hashedPassword
-      }
-
-      user = await insertNewUser(newUser, prisma);
-
-      const token = createJWT(user);
-
-      return {
-        token,
-        user
-      };
-    } catch(error) {
-      throw new Error(error.message);
-    } finally {
-      await prisma.$disconnect();
+    // Alternatively, input.password = hashedPassword
+    const newUser = {
+      ...input,
+      password: hashedPassword
     }
+
+    user = await insertNewUser(newUser, prisma);
+
+    const token = createJWT(user);
+
+    return {
+      token,
+      user
+    };
+  } catch(error) {
+    throw new Error(error.message);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 module.exports = {
